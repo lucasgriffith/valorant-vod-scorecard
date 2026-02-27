@@ -198,7 +198,7 @@ function exportCurrentCSV(){
 
 function h(tag,attrs,...children){
   const el=document.createElement(tag);
-  if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(el.style,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else if(k==="className")el.className=v;else if(k==="innerHTML")el.innerHTML=v;else el.setAttribute(k,v);});
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(el.style,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else if(k==="className")el.className=v;else if(k==="innerHTML")el.innerHTML=v;else if(k==="disabled"){el.disabled=!!v;}else if(v===false||v==null){}else el.setAttribute(k,v);});
   children.flat(Infinity).forEach(c=>{if(c==null||c===false)return;el.appendChild(typeof c==="string"||typeof c==="number"?document.createTextNode(String(c)):c);});
   return el;
 }
