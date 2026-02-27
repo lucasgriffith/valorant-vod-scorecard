@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VOD Review">
+<meta name="theme-color" content="#0a0a14">
+<meta name="description" content="VALORANT VOD Review Scorecard — Track your gameplay improvement">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>VALORANT VOD Scorecard</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0a0a14;--surface:rgba(255,255,255,0.02);--border:rgba(255,255,255,0.06);
+  --red:#ff4655;--orange:#ff8c3a;--yellow:#f5c542;--green:#53d769;--teal:#00e5a0;
+  --blue:#50a0ff;--text:#e0e0e0;--muted:#888;--dim:#555;
+  --raj:'Rajdhani',sans-serif;--body:'Barlow',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);}
+button{font-family:var(--raj);cursor:pointer;border:none;background:none;color:var(--text);}
+select,input,textarea{font-family:var(--body);outline:none;color:#ccc;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+
+.header{background:linear-gradient(180deg,rgba(255,70,85,0.1) 0%,transparent 100%);border-bottom:1px solid rgba(255,70,85,0.15);padding:20px 24px 0;text-align:center;}
+.header-tag{font-family:var(--raj);font-weight:700;font-size:11px;letter-spacing:6px;color:var(--red);text-transform:uppercase;margin-bottom:4px;}
+.header h1{font-family:var(--raj);font-weight:700;font-size:28px;letter-spacing:3px;color:#fff;text-transform:uppercase;}
+.header-sub{font-size:11px;color:#666;margin-top:4px;}
+.tabs{display:flex;justify-content:center;margin-top:14px;gap:0;}
+.tab-btn{padding:10px 24px;font-weight:700;font-size:12px;letter-spacing:2px;color:var(--dim);border-bottom:2px solid transparent;transition:all 0.2s;}
+.tab-btn.active{color:var(--red);background:rgba(255,70,85,0.1);border-bottom-color:var(--red);}
+.tab-btn:hover:not(.active){color:#999;}
+
+/* Wide layout containers */
+.container-wide{max-width:1400px;margin:0 auto;padding:20px 24px 60px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:start;}
+.col{display:flex;flex-direction:column;gap:12px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:0;}
+.section-hdr{font-family:var(--raj);font-weight:700;font-size:11px;letter-spacing:3px;color:var(--red);margin-bottom:12px;text-transform:uppercase;}
+.sel{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:8px 12px;font-size:13px;width:100%;appearance:none;-webkit-appearance:none;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.grid-5{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:10px;}
+
+.score-btn{width:36px;height:36px;border-radius:4px;font-weight:700;font-size:14px;font-family:var(--raj);transition:all 0.15s;border:2px solid transparent;background:rgba(255,255,255,0.04);color:#666;}
+.score-btn.s1{--sc:var(--red)}.score-btn.s2{--sc:var(--orange)}.score-btn.s3{--sc:var(--yellow)}.score-btn.s4{--sc:var(--green)}.score-btn.s5{--sc:var(--teal)}
+.score-btn.active{background:var(--sc);border-color:var(--sc);color:#fff;}
+.score-btn.s3.active,.score-btn.s4.active,.score-btn.s5.active{color:#1a1a2e;}
+
+.cat-header{width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:transparent;cursor:pointer;color:var(--text);}
+.cat-icon{font-size:16px;color:var(--red);opacity:0.8;margin-right:8px;}
+.cat-name{font-family:var(--raj);font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;}
+.cat-avg{font-family:var(--raj);font-weight:700;font-size:18px;}
+.cat-arrow{font-size:10px;color:#666;transition:transform 0.2s;margin-left:10px;}
+.cat-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid rgba(255,255,255,0.04);gap:12px;}
+.cat-item-label{font-size:12px;color:var(--muted);flex:1;}
+.cat-item-label.scored{color:#ccc;}
+
+.progress-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-top:6px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--orange));border-radius:2px;transition:width 0.3s;}
+
+.round-pill{width:32px;height:32px;border-radius:4px;font-size:11px;font-weight:700;font-family:var(--raj);position:relative;transition:all 0.15s;}
+.round-pill.won{background:rgba(83,215,105,0.2);color:var(--green);}
+.round-pill.lost{background:rgba(255,70,85,0.2);color:var(--red);}
+.round-pill.empty{background:rgba(255,255,255,0.04);color:var(--dim);}
+.round-pill.selected{outline:2px solid rgba(255,255,255,0.3);outline-offset:1px;}
+.kill-badge{position:absolute;top:-4px;right:-4px;background:var(--teal);color:#0f0f1a;border-radius:10px;font-size:8px;font-weight:800;width:14px;height:14px;display:flex;align-items:center;justify-content:center;}
+.death-mark{position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);font-size:6px;color:var(--red);}
+
+.toggle-btn{flex:1;padding:10px 0;border-radius:6px;font-family:var(--raj);font-weight:700;font-size:13px;letter-spacing:2px;border:2px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.04);color:#666;transition:all 0.15s;}
+.reason-chip{padding:5px 10px;border-radius:20px;font-size:11px;font-family:var(--body);font-weight:500;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.04);color:var(--muted);cursor:pointer;white-space:nowrap;transition:all 0.15s;}
+.reason-chip.active{background:rgba(255,70,85,0.2);color:var(--red);border-color:rgba(255,70,85,0.4);}
+
+.action-btn{padding:12px 0;border-radius:6px;font-family:var(--raj);font-weight:700;font-size:13px;letter-spacing:2px;text-transform:uppercase;transition:all 0.15s;}
+.action-primary{background:var(--red);color:#fff;flex:1;}
+.action-primary:disabled{background:rgba(255,255,255,0.04);color:var(--dim);cursor:not-allowed;}
+.action-secondary{background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid var(--border);padding:12px 20px;}
+.action-save{background:var(--teal);color:#0f0f1a;flex:1;}
+
+.stat-box{background:rgba(255,255,255,0.03);border-radius:6px;padding:10px 8px;text-align:center;}
+.stat-val{font-family:var(--raj);font-weight:700;font-size:20px;}
+.stat-label{font-size:9px;color:#666;letter-spacing:1px;font-family:var(--raj);margin-top:2px;}
+
+.analysis-panel{background:rgba(255,70,85,0.03);border:1px solid rgba(255,70,85,0.12);border-radius:10px;padding:20px;}
+.dash-card{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:18px;margin-bottom:0;}
+.dash-big-stat{font-family:var(--raj);font-weight:700;font-size:38px;line-height:1;}
+.dash-trend{font-size:11px;font-family:var(--raj);font-weight:600;letter-spacing:1px;margin-top:4px;}
+.dash-trend.up{color:var(--green);}.dash-trend.down{color:var(--red);}.dash-trend.flat{color:var(--yellow);}
+.history-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s;}
+.history-row:hover{background:rgba(255,255,255,0.03);}
+.history-row:last-child{border-bottom:none;}
+.bar-chart-bar{height:16px;border-radius:3px;min-width:2px;transition:width 0.4s ease;}
+.empty-state{text-align:center;padding:60px 20px;color:#555;}
+.empty-state-icon{font-size:48px;margin-bottom:16px;opacity:0.3;}
+.empty-state-text{font-family:var(--raj);font-size:16px;letter-spacing:2px;margin-bottom:8px;}
+.empty-state-sub{font-size:13px;color:#444;}
+
+/* Sticky right panel */
+.sticky-panel{position:sticky;top:20px;}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.fade-in{animation:fadeIn 0.25s ease forwards;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const AGENTS=["Jett","Reyna","Raze","Phoenix","Yoru","Neon","Iso","Sage","Skye","Gekko","Deadlock","Astra","Brimstone","Omen","Harbor","Clove","Viper","Killjoy","Cypher","Chamber","Sova","Fade","Breach","KAY/O","Vyse"];
+const MAPS=["Abyss","Ascent","Bind","Breeze","Fracture","Haven","Icebox","Lotus","Pearl","Split","Sunset"];
+const RANKS=["Iron","Bronze","Silver","Gold","Platinum","Diamond","Ascendant","Immortal","Radiant"];
+const DEATH_REASONS=["Wide swung into multiple","Dry peeked known angle","Bad crosshair placement","Caught rotating","Overextended / no cover","Whiffed spray","Flanked / no info","Insta-killed (Op/headshot)","Traded (acceptable)","Util'd out (flashed/stunned)","Eco'd / force buy loss","Off angle / unexpected peek","Didn't check corner","Slow reaction","Held too long / predictable","Post-plant exposed","Peeked with spike","1vX hero play attempt"];
+const CATEGORIES=[
+  {name:"CROSSHAIR PLACEMENT",icon:"◎",items:[{id:"head_level",label:"Keeping crosshair at head level"},{id:"pre_aim",label:"Pre-aiming common angles"},{id:"crosshair_discipline",label:"Not dragging crosshair to ground"}]},
+  {name:"POSITIONING",icon:"⬡",items:[{id:"off_angles",label:"Using off-angles effectively"},{id:"cover",label:"Playing near cover / not exposed"},{id:"site_anchor",label:"Holding site properly (defense)"},{id:"post_plant",label:"Post-plant positioning"}]},
+  {name:"UTILITY USAGE",icon:"◈",items:[{id:"util_timing",label:"Using util at the right time"},{id:"util_value",label:"Getting value from abilities"},{id:"util_econ",label:"Not wasting util (saving when needed)"}]},
+  {name:"GAME SENSE",icon:"◉",items:[{id:"minimap",label:"Checking minimap regularly"},{id:"sound_cues",label:"Reacting to sound cues"},{id:"enemy_reads",label:"Reading enemy patterns / adapting"},{id:"rotation",label:"Rotating at the right time"}]},
+  {name:"ECONOMY",icon:"◇",items:[{id:"buy_decisions",label:"Correct buy/save decisions"},{id:"team_econ",label:"Matching team economy"},{id:"weapon_choice",label:"Choosing correct weapon for situation"}]},
+  {name:"DUELS & AIM",icon:"✦",items:[{id:"first_blood",label:"Taking favorable first duels"},{id:"peeking",label:"Peeking correctly (jiggle/wide/slice)"},{id:"spray_control",label:"Spray control & burst discipline"},{id:"trading",label:"Trading teammates effectively"}]},
+  {name:"MENTAL & COMMS",icon:"☰",items:[{id:"tilt",label:"Staying composed after deaths"},{id:"comms",label:"Clear, useful callouts"},{id:"igl",label:"Following/giving strat calls"}]}
+];
+const TOTAL_ITEMS=CATEGORIES.reduce((a,c)=>a+c.items.length,0);
+const avgColor=v=>{if(!v)return"#444";if(v<=1.5)return"#ff4655";if(v<=2.5)return"#ff8c3a";if(v<=3.5)return"#f5c542";if(v<=4.5)return"#53d769";return"#00e5a0";};
+const avgLabel=v=>{if(!v)return"";if(v<=1.5)return"NEEDS WORK";if(v<=2.5)return"BELOW AVG";if(v<=3.5)return"AVERAGE";if(v<=4.5)return"GOOD";return"CRACKED";};
+
+const STORAGE_KEY="valorant_vod_reviews";
+function loadReviews(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[];}catch(e){return[];}}
+function saveReviews(r){localStorage.setItem(STORAGE_KEY,JSON.stringify(r));}
+
+let state={tab:"scorecard",scores:{},agent:"",map:"",rank:"",result:"",roundScore:"",notes:"",collapsed:{},showSummary:false,rounds:[],expandedRound:null,reviews:loadReviews(),selectedReview:null};
+function setState(u){Object.assign(state,u);render();}
+
+function calcAvg(s){const v=Object.values(s).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+function catAvg(cat,s){const v=cat.items.map(i=>s[i.id]).filter(Boolean);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;}
+function scoredCount(s){return Object.values(s).filter(Boolean).length;}
+function getWeakest(s){return CATEGORIES.map(c=>({name:c.name,icon:c.icon,avg:catAvg(c,s)})).filter(c=>c.avg>0).sort((a,b)=>a.avg-b.avg);}
+function getLowest(s){return CATEGORIES.flatMap(c=>c.items.filter(i=>s[i.id]).map(i=>({label:i.label,score:s[i.id],category:c.name}))).sort((a,b)=>a.score-b.score).slice(0,3);}
+function getDeathStats(r){const d={};r.forEach(rd=>{if(rd.deathReason)d[rd.deathReason]=(d[rd.deathReason]||0)+1;});return Object.entries(d).sort((a,b)=>b[1]-a[1]);}
+function formatDate(iso){return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+
+function saveCurrentGame(){
+  const sc=scoredCount(state.scores);if(sc<5)return alert("Score at least 5 items before saving.");
+  const rev={id:Date.now(),date:new Date().toISOString(),agent:state.agent,map:state.map,rank:state.rank,result:state.result,roundScore:state.roundScore,scores:{...state.scores},rounds:[...state.rounds],notes:state.notes,overall:calcAvg(state.scores).toFixed(1),totalKills:state.rounds.reduce((a,r)=>a+(r.kills||0),0),deaths:state.rounds.filter(r=>r.died).length};
+  const reviews=[rev,...state.reviews];saveReviews(reviews);
+  setState({reviews,scores:{},agent:"",map:"",rank:"",result:"",roundScore:"",notes:"",rounds:[],expandedRound:null,showSummary:false,tab:"dashboard"});
+}
+function resetCurrent(){if(scoredCount(state.scores)>0&&!confirm("Clear current review?"))return;setState({scores:{},agent:"",map:"",rank:"",result:"",roundScore:"",notes:"",rounds:[],expandedRound:null,showSummary:false});}
+function deleteReview(id){if(!confirm("Delete this review?"))return;const r=state.reviews.filter(x=>x.id!==id);saveReviews(r);setState({reviews:r,selectedReview:null});}
+
+function exportGameCSV(rev){
+  const esc=v=>{const s=String(v==null?"":v);return s.includes(",")||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:s;};
+  let csv="";
+  // Match info
+  csv+="VALORANT VOD REVIEW\n";
+  csv+=`Date,${esc(formatDate(rev.date))}\n`;
+  csv+=`Agent,${esc(rev.agent)}\nMap,${esc(rev.map)}\nRank,${esc(rev.rank)}\nResult,${esc(rev.result)}\nScore,${esc(rev.roundScore)}\nOverall Rating,${esc(rev.overall)}\n`;
+  const kills=rev.totalKills||0,deaths=rev.deaths||0;
+  const kd=deaths>0?(kills/deaths).toFixed(2):kills>0?String(kills):"—";
+  csv+=`Total Kills,${kills}\nTotal Deaths,${deaths}\nK/D,${kd}\n\n`;
+  // Category scores
+  csv+="CATEGORY SCORES\nCategory,Item,Score\n";
+  CATEGORIES.forEach(cat=>{cat.items.forEach(item=>{csv+=`${esc(cat.name)},${esc(item.label)},${rev.scores[item.id]||""}\n`;});});
+  // Category averages
+  csv+="\nCATEGORY AVERAGES\nCategory,Average\n";
+  CATEGORIES.forEach(cat=>{const a=catAvg(cat,rev.scores);if(a>0)csv+=`${esc(cat.name)},${a.toFixed(1)}\n`;});
+  csv+="\n";
+  // Round log
+  if(rev.rounds&&rev.rounds.length){
+    csv+="ROUND LOG\nRound,Side,Outcome,Kills,Died,Death Reason,Note\n";
+    rev.rounds.forEach((r,i)=>{csv+=`${i+1},${esc(r.side)},${esc(r.outcome)},${r.kills||0},${r.died?"Yes":"No"},${esc(r.deathReason)},${esc(r.note)}\n`;});
+    csv+="\n";
+    // Death reason summary
+    const dr=getDeathStats(rev.rounds);
+    if(dr.length){csv+="DEATH REASON SUMMARY\nReason,Count\n";dr.forEach(([reason,count])=>{csv+=`${esc(reason)},${count}\n`;});}
+    csv+="\n";
+  }
+  // Notes
+  if(rev.notes)csv+=`NOTES\n${esc(rev.notes)}\n`;
+  // Download
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  const fname=[rev.agent,rev.map,rev.result,new Date(rev.date).toISOString().slice(0,10)].filter(Boolean).join("-").replace(/\s+/g,"_");
+  a.download=`vod-review-${fname||"export"}.csv`;a.click();
+}
+
+function exportCurrentCSV(){
+  const sc=scoredCount(state.scores);if(sc<3)return alert("Score at least 3 items first.");
+  const rev={id:0,date:new Date().toISOString(),agent:state.agent,map:state.map,rank:state.rank,result:state.result,roundScore:state.roundScore,scores:{...state.scores},rounds:[...state.rounds],notes:state.notes,overall:calcAvg(state.scores).toFixed(1),totalKills:state.rounds.reduce((a,r)=>a+(r.kills||0),0),deaths:state.rounds.filter(r=>r.died).length};
+  exportGameCSV(rev);
+}
+
+function h(tag,attrs,...children){
+  const el=document.createElement(tag);
+  if(attrs)Object.entries(attrs).forEach(([k,v])=>{if(k==="style"&&typeof v==="object")Object.assign(el.style,v);else if(k.startsWith("on"))el.addEventListener(k.slice(2).toLowerCase(),v);else if(k==="className")el.className=v;else if(k==="innerHTML")el.innerHTML=v;else el.setAttribute(k,v);});
+  children.flat(Infinity).forEach(c=>{if(c==null||c===false)return;el.appendChild(typeof c==="string"||typeof c==="number"?document.createTextNode(String(c)):c);});
+  return el;
+}
+
+// ═══ SHARED COMPONENTS ═══
+
+function renderRadar(scores,size){
+  size=size||240;const cx=size/2,cy=size/2,maxR=size*0.385;
+  const avgs=CATEGORIES.map(c=>catAvg(c,scores));const n=CATEGORIES.length,step=(2*Math.PI)/n;
+  const pt=(i,v)=>{const a=step*i-Math.PI/2,r=(v/5)*maxR;return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};};
+  let svg=`<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">`;
+  for(let l=1;l<=5;l++){const ps=[];for(let i=0;i<n;i++)ps.push(pt(i,l));svg+=`<polygon points="${ps.map(p=>`${p.x},${p.y}`).join(" ")}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;}
+  for(let i=0;i<n;i++){const p=pt(i,5);svg+=`<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;}
+  const dps=avgs.map((v,i)=>pt(i,v));
+  svg+=`<polygon points="${dps.map(p=>`${p.x},${p.y}`).join(" ")}" fill="rgba(255,70,85,0.15)" stroke="#ff4655" stroke-width="2"/>`;
+  dps.forEach((p,i)=>{if(avgs[i]>0)svg+=`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#ff4655"/>`;});
+  CATEGORIES.forEach((c,i)=>{const p=pt(i,6.2);const words=c.name.split(" ");svg+=`<text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="#777" font-size="7" font-family="'Rajdhani',sans-serif" font-weight="600">`;words.forEach((w,wi)=>{svg+=`<tspan x="${p.x}" dy="${wi===0?0:10}">${w}</tspan>`;});svg+=`</text>`;});
+  svg+=`</svg>`;return h("div",{innerHTML:svg,style:{display:"flex",justifyContent:"center"}});
+}
+
+function renderCatBreakdown(scores,label){
+  const w=getWeakest(scores);if(!w.length)return null;
+  return h("div",null,
+    label?h("div",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"11px",letterSpacing:"3px",color:"#888",marginBottom:"8px"}},label):null,
+    ...w.map((c,i)=>h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}},
+      h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}},
+        h("span",{style:{fontSize:"12px",opacity:"0.6"}},c.icon),
+        h("span",{style:{fontSize:"11px",color:i===0?"var(--red)":"#aaa",fontWeight:i===0?"600":"400"}},c.name,
+          i===0?h("span",{style:{fontSize:"8px",marginLeft:"6px",color:"var(--red)",letterSpacing:"1px",fontFamily:"var(--raj)"}},"← FOCUS"):null)
+      ),
+      h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}},
+        h("div",{style:{width:"60px",height:"4px",background:"rgba(255,255,255,0.06)",borderRadius:"2px",overflow:"hidden"}},
+          h("div",{style:{height:"100%",width:`${(c.avg/5)*100}%`,background:avgColor(c.avg),borderRadius:"2px"}})),
+        h("span",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"14px",color:avgColor(c.avg),width:"26px",textAlign:"right"}},c.avg.toFixed(1))
+      )
+    ))
+  );
+}
+
+function renderDeathPatterns(rounds,label,limit){
+  const dr=getDeathStats(rounds);if(!dr.length)return null;const top=dr.slice(0,limit||5);const mx=top[0][1];const totalD=rounds.filter(r=>r.died).length||1;
+  return h("div",null,
+    label?h("div",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"11px",letterSpacing:"3px",color:"#888",marginBottom:"8px"}},label):null,
+    ...top.map(([reason,count],i)=>h("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}},
+      h("span",{style:{fontSize:"10px",color:i<3?"var(--red)":"#888",width:"22px",textAlign:"right",fontFamily:"var(--raj)",fontWeight:"700"}},`${count}x`),
+      h("div",{style:{flex:"1"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"2px"}},
+          h("span",{style:{fontSize:"11px",color:i<3?"#ccc":"#888"}},reason),
+          h("span",{style:{fontSize:"9px",color:"#555",fontFamily:"var(--raj)"}},Math.round(count/totalD*100)+"%")
+        ),
+        h("div",{style:{height:"3px",background:"rgba(255,255,255,0.04)",borderRadius:"2px",overflow:"hidden"}},
+          h("div",{className:"bar-chart-bar",style:{height:"3px",width:`${(count/mx)*100}%`,background:i===0?"var(--red)":i<3?"rgba(255,70,85,0.5)":"rgba(255,255,255,0.15)"}}))
+      )
+    ))
+  );
+}
+
+// ═══ HEADER ═══
+function renderHeader(){
+  return h("div",{className:"header"},
+    h("div",{className:"header-tag"},"TACTICAL REVIEW"),
+    h("h1",null,"VOD SCORECARD"),
+    h("div",{className:"header-sub"},"Rate each area 1–5 · Log rounds · Track progress over time"),
+    h("div",{className:"tabs"},
+      ...[{id:"scorecard",label:"SCORECARD"},{id:"rounds",label:`ROUNDS${state.rounds.length?` (${state.rounds.length})`:""}`},{id:"dashboard",label:`DASHBOARD${state.reviews.length?` (${state.reviews.length})`:""}`}].map(t=>
+        h("button",{className:`tab-btn${state.tab===t.id?" active":""}`,onClick:()=>setState({tab:t.id})},t.label)))
+  );
+}
+
+function renderMatchInfo(){
+  function mkSel(val,opts,key){const s=h("select",{className:"sel",onChange:e=>setState({[key]:e.target.value})},h("option",{value:""},key.charAt(0).toUpperCase()+key.slice(1)),...opts.map(o=>h("option",{value:o},o)));s.value=val;return s;}
+  const inp=h("input",{className:"sel",placeholder:"Score (e.g. 13-9)",onChange:e=>setState({roundScore:e.target.value})});inp.value=state.roundScore;
+  return h("div",{className:"card"},h("div",{className:"section-hdr"},"◆ MATCH INFO"),h("div",{className:"grid-5"},mkSel(state.agent,AGENTS,"agent"),mkSel(state.map,MAPS,"map"),mkSel(state.rank,RANKS,"rank"),mkSel(state.result,["Win","Loss","Draw"],"result"),inp));
+}
+
+// ═══ SCORECARD TAB ═══
+function renderScorecard(){
+  const sc=scoredCount(state.scores);const avg=calcAvg(state.scores);const avgF=sc?avg.toFixed(1):null;
+  const progress=h("div",{style:{marginBottom:"16px"}},
+    h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}},
+      h("span",{style:{fontSize:"11px",color:"#666"}},`${sc}/${TOTAL_ITEMS} scored`),
+      avgF?h("span",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"14px",color:avgColor(avg)}},`Overall: ${avgF} — ${avgLabel(avg)}`):null),
+    h("div",{className:"progress-bar"},h("div",{className:"progress-fill",style:{width:`${(sc/TOTAL_ITEMS)*100}%`}})));
+
+  const cats=CATEGORIES.map(cat=>{
+    const ca=catAvg(cat,state.scores);const isC=state.collapsed[cat.name];
+    const header=h("button",{className:"cat-header",onClick:()=>{state.collapsed[cat.name]=!state.collapsed[cat.name];render();}},
+      h("div",{style:{display:"flex",alignItems:"center"}},h("span",{className:"cat-icon"},cat.icon),h("span",{className:"cat-name"},cat.name)),
+      h("div",{style:{display:"flex",alignItems:"center"}},ca>0?h("span",{className:"cat-avg",style:{color:avgColor(ca)}},ca.toFixed(1)):null,h("span",{className:"cat-arrow",style:{transform:isC?"rotate(0deg)":"rotate(180deg)"}},"▼")));
+    const items=isC?null:h("div",{style:{padding:"0 16px 12px"}},...cat.items.map(item=>
+      h("div",{className:"cat-item"},
+        h("span",{className:`cat-item-label${state.scores[item.id]?" scored":""}`},item.label),
+        h("div",{style:{display:"flex",gap:"4px"}},...[1,2,3,4,5].map(v=>h("button",{className:`score-btn s${v}${state.scores[item.id]===v?" active":""}`,onClick:()=>{state.scores[item.id]=state.scores[item.id]===v?undefined:v;render();}},String(v)))))));
+    return h("div",{style:{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"8px",overflow:"hidden"}},header,items);
+  });
+
+  // Right panel - live analysis
+  const rightPanel=h("div",{className:"sticky-panel"});
+  if(sc>=3){
+    rightPanel.appendChild(h("div",{className:"analysis-panel"},
+      h("div",{style:{textAlign:"center",marginBottom:"16px"}},
+        (state.agent||state.map)?h("div",{style:{fontFamily:"var(--raj)",fontSize:"13px",fontWeight:"600",color:"#aaa",marginBottom:"12px"}},[state.agent,state.map,state.roundScore,state.result].filter(Boolean).join(" · ")+(state.rank?` @ ${state.rank}`:"")):null,
+        renderRadar(state.scores,200),
+        h("div",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"48px",color:avgColor(avg),lineHeight:"1",marginTop:"12px"}},avgF||"—"),
+        h("div",{style:{fontFamily:"var(--raj)",fontWeight:"600",fontSize:"12px",letterSpacing:"2px",color:avgColor(avg),opacity:"0.8",marginTop:"4px"}},avgLabel(avg))
+      ),
+      renderCatBreakdown(state.scores,"CATEGORY BREAKDOWN"),
+      getLowest(state.scores).length?h("div",{style:{marginTop:"14px"}},
+        h("div",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"11px",letterSpacing:"3px",color:"#888",marginBottom:"8px"}},"TOP AREAS TO IMPROVE"),
+        ...getLowest(state.scores).map(item=>h("div",{style:{display:"flex",alignItems:"center",gap:"8px",padding:"6px 10px",marginBottom:"4px",background:"rgba(255,70,85,0.06)",borderRadius:"6px",borderLeft:"3px solid var(--red)"}},
+          h("span",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"16px",color:"var(--red)",width:"20px"}},String(item.score)),
+          h("div",null,h("div",{style:{fontSize:"12px",color:"#ccc"}},item.label),h("div",{style:{fontSize:"9px",color:"#666",fontFamily:"var(--raj)",letterSpacing:"1px"}},item.category))))
+      ):null
+    ));
+  } else {
+    rightPanel.appendChild(h("div",{className:"card",style:{textAlign:"center",padding:"40px 20px",color:"#444"}},
+      h("div",{style:{fontSize:"36px",marginBottom:"12px",opacity:"0.2"}},"◎"),
+      h("div",{style:{fontFamily:"var(--raj)",fontSize:"13px",letterSpacing:"2px"}},"SCORE AT LEAST 3 ITEMS"),
+      h("div",{style:{fontSize:"12px",marginTop:"4px",color:"#333"}},"Analysis will appear here as you rate")));
+  }
+
+  // Notes + actions
+  const ta=h("textarea",{className:"sel",rows:"3",placeholder:"Key takeaways — what to focus on next game...",style:{width:"100%",resize:"vertical",minHeight:"60px"},onChange:e=>{state.notes=e.target.value;}});ta.value=state.notes;
+  const notesCard=h("div",{className:"card"},h("div",{className:"section-hdr"},"◆ KEY TAKEAWAYS"),ta);
+
+  const actions=h("div",{style:{display:"flex",gap:"8px",marginTop:"4px"}},
+    h("button",{className:"action-btn action-save",disabled:sc<5,style:{opacity:sc>=5?1:0.4,cursor:sc>=5?"pointer":"not-allowed"},onClick:saveCurrentGame},"SAVE GAME"),
+    h("button",{className:"action-btn action-secondary",style:{padding:"12px 16px"},onClick:exportCurrentCSV},"CSV ↓"),
+    h("button",{className:"action-btn action-secondary",onClick:resetCurrent},"RESET"));
+
+  return h("div",{className:"two-col fade-in"},
+    h("div",{className:"col"},progress,...cats,notesCard,actions),
+    rightPanel
+  );
+}
+
+// ═══ ROUNDS TAB ═══
+function renderRounds(){
+  const rounds=state.rounds;
+  const won=rounds.filter(r=>r.outcome==="won").length,lost=rounds.filter(r=>r.outcome==="lost").length;
+  const kills=rounds.reduce((a,r)=>a+(r.kills||0),0),deaths=rounds.filter(r=>r.died).length;
+  const kd=deaths>0?(kills/deaths).toFixed(2):kills>0?String(kills):"—";
+
+  // Left: round log
+  const statsRow=rounds.length?h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"8px",marginBottom:"14px"}},
+    ...[{l:"ROUNDS",v:`${won}W-${lost}L`,c:won>lost?"var(--green)":won<lost?"var(--red)":"var(--yellow)"},{l:"KILLS",v:kills,c:"var(--teal)"},{l:"DEATHS",v:deaths,c:"var(--red)"},{l:"K/D",v:kd,c:parseFloat(kd)>=1?"var(--green)":"var(--orange)"}].map(s=>
+      h("div",{className:"stat-box"},h("div",{className:"stat-val",style:{color:s.c}},String(s.v)),h("div",{className:"stat-label"},s.l)))):null;
+
+  const pills=rounds.length?h("div",{style:{display:"flex",flexWrap:"wrap",gap:"4px",marginBottom:"14px"}},
+    ...rounds.map((rd,i)=>{
+      const pill=h("button",{className:`round-pill ${rd.outcome||"empty"}${state.expandedRound===i?" selected":""}`,onClick:()=>setState({expandedRound:state.expandedRound===i?null:i})},String(i+1));
+      if(rd.kills>0)pill.appendChild(h("span",{className:"kill-badge"},String(rd.kills)));
+      if(rd.died)pill.appendChild(h("span",{className:"death-mark"},"✕"));
+      const wrap=h("div",{style:{display:"flex",alignItems:"center"}});
+      if(i===12)wrap.appendChild(h("div",{style:{width:"2px",height:"20px",background:"rgba(255,255,255,0.15)",borderRadius:"1px",margin:"0 6px 0 2px"}}));
+      wrap.appendChild(pill);return wrap;})):null;
+
+  // Expanded detail
+  let detail=null;
+  if(state.expandedRound!==null&&rounds[state.expandedRound]){
+    const idx=state.expandedRound,r=rounds[idx];
+    const upd=(f,v)=>{rounds[idx]={...rounds[idx],[f]:v};if(f==="died"&&!v)rounds[idx].deathReason="";setState({rounds:[...rounds]});};
+    const noteInp=h("input",{className:"sel",placeholder:"e.g. clutched 1v2, whiffed Op shot...",onChange:e=>upd("note",e.target.value)});noteInp.value=r.note;
+    detail=h("div",{style:{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"14px"},className:"fade-in"},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}},
+        h("span",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"16px",color:"#fff",letterSpacing:"1px"}},`ROUND ${idx+1}`,h("span",{style:{fontSize:"11px",color:"#666",marginLeft:"8px",fontWeight:"500"}},r.side)),
+        h("button",{style:{background:"rgba(255,70,85,0.1)",border:"1px solid rgba(255,70,85,0.2)",color:"var(--red)",borderRadius:"4px",padding:"4px 10px",fontSize:"11px",letterSpacing:"1px"},onClick:()=>{rounds.splice(idx,1);setState({rounds:[...rounds],expandedRound:null});}},"DELETE")),
+      // Outcome + Side row
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"12px"}},
+        h("div",null,h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"OUTCOME"),
+          h("div",{style:{display:"flex",gap:"6px"}},...[{v:"won",l:"WON",c:"var(--green)"},{v:"lost",l:"LOST",c:"var(--red)"}].map(o=>h("button",{className:"toggle-btn",style:{background:r.outcome===o.v?o.c:"",color:r.outcome===o.v?"#0f0f1a":"",borderColor:r.outcome===o.v?o.c:"",fontSize:"12px",padding:"8px 0"},onClick:()=>upd("outcome",o.v)},o.l)))),
+        h("div",null,h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"SIDE"),
+          h("div",{style:{display:"flex",gap:"6px"}},...["ATK","DEF"].map(s=>h("button",{className:"toggle-btn",style:{background:r.side===s?(s==="ATK"?"rgba(255,140,58,0.2)":"rgba(80,160,255,0.2)"):"",color:r.side===s?(s==="ATK"?"var(--orange)":"var(--blue)"):"",borderColor:r.side===s?(s==="ATK"?"rgba(255,140,58,0.4)":"rgba(80,160,255,0.4)"):"",fontSize:"12px",padding:"8px 0"},onClick:()=>upd("side",s)},s))))),
+      // Kills + Died row
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px",marginBottom:"12px"}},
+        h("div",null,h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"KILLS"),
+          h("div",{style:{display:"flex",gap:"4px"}},...[0,1,2,3,4,5].map(k=>h("button",{style:{width:"36px",height:"36px",borderRadius:"6px",fontFamily:"var(--raj)",fontWeight:"700",fontSize:"15px",background:r.kills===k?"var(--teal)":"rgba(255,255,255,0.04)",color:r.kills===k?"#0f0f1a":"#666",border:r.kills===k?"2px solid var(--teal)":"2px solid rgba(255,255,255,0.06)",cursor:"pointer"},onClick:()=>upd("kills",k)},String(k))))),
+        h("div",null,h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"DIED?"),
+          h("div",{style:{display:"flex",gap:"6px"}},...[{v:true,l:"DIED"},{v:false,l:"SURVIVED"}].map(o=>h("button",{className:"toggle-btn",style:{background:r.died===o.v?(o.v?"rgba(255,70,85,0.15)":"rgba(83,215,105,0.15)"):"",color:r.died===o.v?(o.v?"var(--red)":"var(--green)"):"",borderColor:r.died===o.v?(o.v?"rgba(255,70,85,0.4)":"rgba(83,215,105,0.4)"):"",fontSize:"12px",padding:"8px 0"},onClick:()=>upd("died",o.v)},o.l))))),
+      // Death reason
+      r.died?h("div",{style:{marginBottom:"10px"}},h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"WHY DID YOU DIE?"),
+        h("div",{style:{display:"flex",flexWrap:"wrap",gap:"5px"}},...DEATH_REASONS.map(reason=>h("button",{className:`reason-chip${r.deathReason===reason?" active":""}`,onClick:()=>upd("deathReason",reason)},reason)))):null,
+      h("div",null,h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"NOTE"),noteInp));
+  }
+
+  const addBtn=h("button",{style:{width:"100%",padding:"10px 0",borderRadius:"6px",background:"rgba(255,70,85,0.08)",border:"1px dashed rgba(255,70,85,0.3)",color:"var(--red)",fontFamily:"var(--raj)",fontWeight:"700",fontSize:"13px",letterSpacing:"2px",cursor:"pointer",marginTop:"8px"},onClick:()=>{
+    const num=rounds.length+1;let side="ATK";
+    if(rounds.length>0){const fs=rounds[0]?.side||"ATK";if(num>12&&num<=24)side=fs==="ATK"?"DEF":"ATK";else if(num<=12)side=fs;else side="OT";}
+    rounds.push({outcome:"",kills:0,died:false,deathReason:"",side,note:""});setState({rounds:[...rounds],expandedRound:rounds.length-1});
+  }},`+ ADD ROUND ${rounds.length+1}`);
+
+  const leftCol=h("div",{className:"col"},h("div",{className:"card"},h("div",{className:"section-hdr"},"◆ ROUND-BY-ROUND LOG"),statsRow,pills,detail,addBtn));
+
+  // Right: death pattern analysis
+  const rightCol=h("div",{className:"sticky-panel"});
+  if(deaths>0){
+    rightCol.appendChild(h("div",{className:"card"},h("div",{className:"section-hdr"},"◆ DEATH ANALYSIS"),renderDeathPatterns(rounds,"ALL DEATH REASONS",17)));
+  }
+  // Round notes summary
+  const notedRounds=rounds.filter(r=>r.note).map((r,i)=>({...r,num:rounds.indexOf(r)+1}));
+  if(notedRounds.length){
+    rightCol.appendChild(h("div",{className:"card",style:{marginTop:"12px"}},h("div",{className:"section-hdr"},"◆ ROUND NOTES"),
+      ...notedRounds.map(r=>h("div",{style:{padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.04)",display:"flex",gap:"8px"}},
+        h("span",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"13px",color:r.outcome==="won"?"var(--green)":"var(--red)",minWidth:"20px"}},`R${r.num}`),
+        h("span",{style:{fontSize:"12px",color:"#aaa"}},r.note)))));
+  }
+
+  return h("div",{className:"two-col fade-in"},leftCol,rightCol);
+}
+
+// ═══ DASHBOARD ═══
+function renderDashboard(){
+  const reviews=state.reviews;
+  if(!reviews.length)return h("div",{className:"fade-in"},h("div",{className:"empty-state"},h("div",{className:"empty-state-icon"},"◎"),h("div",{className:"empty-state-text"},"NO REVIEWS YET"),h("div",{className:"empty-state-sub"},"Complete a VOD review and save it to start tracking."),h("button",{className:"action-btn action-primary",style:{marginTop:"20px",padding:"12px 32px"},onClick:()=>setState({tab:"scorecard"})},"START REVIEW")));
+
+  // Detail view
+  if(state.selectedReview!==null){
+    const rev=reviews.find(r=>r.id===state.selectedReview);if(!rev)return null;
+    const kills=rev.totalKills||0,deaths=rev.deaths||0;
+    const kd=deaths>0?(kills/deaths).toFixed(2):kills>0?String(kills):"—";
+    return h("div",{className:"fade-in"},
+      h("button",{style:{color:"var(--red)",fontFamily:"var(--raj)",fontWeight:"700",fontSize:"12px",letterSpacing:"2px",marginBottom:"12px",padding:"6px 0"},onClick:()=>setState({selectedReview:null})},"← BACK"),
+      h("div",{className:"two-col"},
+        h("div",{className:"col"},
+          h("div",{className:"dash-card"},
+            h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}},
+              h("div",null,h("div",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"16px",color:"#fff"}},[rev.agent,rev.map].filter(Boolean).join(" · ")||"Review"),
+                h("div",{style:{fontSize:"11px",color:"#666",marginTop:"2px"}},formatDate(rev.date)+(rev.result?` · ${rev.result}`:"")+(rev.roundScore?` · ${rev.roundScore}`:"")+(rev.rank?` · ${rev.rank}`:""))),
+              h("div",{style:{display:"flex",gap:"6px"}},
+                h("button",{style:{background:"rgba(0,229,160,0.1)",border:"1px solid rgba(0,229,160,0.2)",color:"var(--teal)",borderRadius:"4px",padding:"4px 10px",fontSize:"11px",letterSpacing:"1px",fontFamily:"var(--raj)",fontWeight:"600"},onClick:()=>exportGameCSV(rev)},"CSV ↓"),
+                h("button",{style:{background:"rgba(255,70,85,0.1)",border:"1px solid rgba(255,70,85,0.2)",color:"var(--red)",borderRadius:"4px",padding:"4px 10px",fontSize:"11px"},onClick:()=>deleteReview(rev.id)},"DELETE"))),
+            h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"8px"}},
+              ...[{l:"OVERALL",v:rev.overall,c:avgColor(parseFloat(rev.overall))},{l:"KILLS",v:kills,c:"var(--teal)"},{l:"DEATHS",v:deaths,c:"var(--red)"},{l:"K/D",v:kd,c:parseFloat(kd)>=1?"var(--green)":"var(--orange)"}].map(s=>h("div",{className:"stat-box"},h("div",{className:"stat-val",style:{color:s.c}},String(s.v)),h("div",{className:"stat-label"},s.l))))),
+          renderCatBreakdown(rev.scores,"CATEGORY BREAKDOWN")?h("div",{className:"dash-card"},renderCatBreakdown(rev.scores)):null,
+          rev.notes?h("div",{className:"dash-card"},h("div",{style:{fontSize:"10px",color:"#666",fontFamily:"var(--raj)",letterSpacing:"2px",marginBottom:"4px"}},"NOTES"),h("div",{style:{fontSize:"12px",color:"#aaa",lineHeight:"1.4",whiteSpace:"pre-wrap"}},rev.notes)):null
+        ),
+        h("div",{className:"col"},
+          h("div",{className:"dash-card",style:{textAlign:"center"}},renderRadar(rev.scores,220),
+            h("div",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"42px",color:avgColor(parseFloat(rev.overall)),lineHeight:"1",marginTop:"8px"}},rev.overall),
+            h("div",{style:{fontFamily:"var(--raj)",fontWeight:"600",fontSize:"11px",letterSpacing:"2px",color:avgColor(parseFloat(rev.overall)),opacity:"0.8",marginTop:"4px"}},avgLabel(parseFloat(rev.overall)))),
+          (rev.rounds||[]).filter(r=>r.died).length?h("div",{className:"dash-card"},h("div",{className:"section-hdr"},"◆ DEATH PATTERNS"),renderDeathPatterns(rev.rounds||[],"",10)):null
+        )
+      ));
+  }
+
+  // ─── Overview ───
+  const overalls=reviews.map(r=>parseFloat(r.overall));
+  const latestAvg=overalls[0];const prevAvg=overalls.length>1?overalls[1]:null;
+  const trend=prevAvg!==null?(latestAvg-prevAvg):0;
+  const allKills=reviews.reduce((a,r)=>a+(r.totalKills||0),0);
+  const allDeaths=reviews.reduce((a,r)=>a+(r.deaths||0),0);
+  const allKD=allDeaths>0?(allKills/allDeaths).toFixed(2):allKills>0?String(allKills):"—";
+  const wins=reviews.filter(r=>r.result==="Win").length,losses=reviews.filter(r=>r.result==="Loss").length;
+  const winRate=wins+losses>0?Math.round((wins/(wins+losses))*100):null;
+
+  const allDR={};reviews.forEach(rev=>{(rev.rounds||[]).forEach(r=>{if(r.deathReason)allDR[r.deathReason]=(allDR[r.deathReason]||0)+1;});});
+  const allCatAvgs=CATEGORIES.map(cat=>{const v=reviews.flatMap(rev=>cat.items.map(i=>rev.scores[i.id]).filter(Boolean));return{name:cat.name,icon:cat.icon,avg:v.length?v.reduce((a,b)=>a+b,0)/v.length:0};}).filter(c=>c.avg>0).sort((a,b)=>a.avg-b.avg);
+  const trendData=reviews.slice(0,15).reverse();
+
+  // Build score trend SVG
+  let trendSVG=null;
+  if(trendData.length>1){
+    const w=500,ht=100,pad=30;
+    const min=Math.max(0,Math.min(...trendData.map(d=>parseFloat(d.overall)))-0.5);
+    const max=Math.min(5,Math.max(...trendData.map(d=>parseFloat(d.overall)))+0.5);
+    const pts=trendData.map((d,i)=>{const x=pad+i*((w-pad*2)/(trendData.length-1));const y=pad+(1-(parseFloat(d.overall)-min)/(max-min))*(ht-pad*2);return{x,y,v:parseFloat(d.overall)};});
+    let svg=`<svg viewBox="0 0 ${w} ${ht}" width="100%" height="${ht}" style="overflow:visible">`;
+    for(let g=0;g<=4;g++){const gy=pad+g*((ht-pad*2)/4);const gv=(max-((g/4)*(max-min))).toFixed(1);svg+=`<line x1="${pad}" y1="${gy}" x2="${w-pad}" y2="${gy}" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>`;svg+=`<text x="${pad-8}" y="${gy+3}" text-anchor="end" fill="#555" font-size="9" font-family="'Rajdhani',sans-serif">${gv}</text>`;}
+    svg+=`<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ff4655" stop-opacity="0.2"/><stop offset="100%" stop-color="#ff4655" stop-opacity="0"/></linearGradient></defs>`;
+    svg+=`<polygon points="${pts[0].x},${ht-pad} ${pts.map(p=>`${p.x},${p.y}`).join(" ")} ${pts[pts.length-1].x},${ht-pad}" fill="url(#ag)"/>`;
+    svg+=`<polyline points="${pts.map(p=>`${p.x},${p.y}`).join(" ")}" fill="none" stroke="#ff4655" stroke-width="2"/>`;
+    pts.forEach(p=>{svg+=`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#0a0a14" stroke="#ff4655" stroke-width="2"/>`;});
+    trendData.forEach((d,i)=>{const x=pts[i].x;const label=d.agent?d.agent.slice(0,3).toUpperCase():`G${i+1}`;svg+=`<text x="${x}" y="${ht-6}" text-anchor="middle" fill="#555" font-size="7" font-family="'Rajdhani',sans-serif">${label}</text>`;});
+    svg+=`</svg>`;trendSVG=h("div",{innerHTML:svg});
+  }
+
+  // All-time death reasons as flat array for shared component
+  const allRoundsFlat=reviews.flatMap(r=>(r.rounds||[]));
+
+  return h("div",{className:"fade-in"},
+    // Top stats row
+    h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:"12px",marginBottom:"16px"}},
+      h("div",{className:"dash-card",style:{textAlign:"center"}},
+        h("div",{className:"dash-big-stat",style:{color:avgColor(latestAvg)}},overalls[0].toFixed(1)),
+        h("div",{className:`dash-trend ${trend>0?"up":trend<0?"down":"flat"}`},trend>0?`▲ ${trend.toFixed(1)}`:trend<0?`▼ ${Math.abs(trend).toFixed(1)}`:"—"),
+        h("div",{className:"stat-label",style:{marginTop:"6px"}},"LATEST SCORE")),
+      h("div",{className:"dash-card",style:{textAlign:"center"}},
+        h("div",{className:"dash-big-stat",style:{color:(overalls.reduce((a,b)=>a+b,0)/overalls.length)>=3?"var(--green)":"var(--orange)"}},(overalls.reduce((a,b)=>a+b,0)/overalls.length).toFixed(1)),
+        h("div",{style:{fontSize:"10px",color:"#666",fontFamily:"var(--raj)",marginTop:"4px"}},`${reviews.length} games`),
+        h("div",{className:"stat-label",style:{marginTop:"4px"}},"AVG SCORE")),
+      h("div",{className:"dash-card",style:{textAlign:"center"}},
+        h("div",{className:"dash-big-stat",style:{color:"var(--teal)"}},allKD),
+        h("div",{style:{fontSize:"10px",color:"#666",fontFamily:"var(--raj)",marginTop:"4px"}},`${allKills}K / ${allDeaths}D`),
+        h("div",{className:"stat-label",style:{marginTop:"4px"}},"ALL-TIME K/D")),
+      h("div",{className:"dash-card",style:{textAlign:"center"}},
+        h("div",{className:"dash-big-stat",style:{color:winRate!==null?(winRate>=50?"var(--green)":"var(--red)"):"#666"}},winRate!==null?`${winRate}%`:"—"),
+        h("div",{style:{fontSize:"10px",color:"#666",fontFamily:"var(--raj)",marginTop:"4px"}},`${wins}W - ${losses}L`),
+        h("div",{className:"stat-label",style:{marginTop:"4px"}},"WIN RATE"))),
+
+    // Main content: 3 columns
+    h("div",{className:"three-col"},
+      // Col 1: Score trend + Category averages
+      h("div",{className:"col"},
+        trendSVG?h("div",{className:"dash-card"},h("div",{className:"section-hdr"},"◆ SCORE TREND"),trendSVG):null,
+        allCatAvgs.length?h("div",{className:"dash-card"},h("div",{className:"section-hdr"},"◆ ALL-TIME CATEGORIES"),
+          ...allCatAvgs.map((c,i)=>h("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}},
+            h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}},h("span",{style:{fontSize:"12px",opacity:"0.6"}},c.icon),
+              h("span",{style:{fontSize:"11px",color:i===0?"var(--red)":"#aaa",fontWeight:i===0?"600":"400"}},c.name,i===0?h("span",{style:{fontSize:"8px",marginLeft:"6px",color:"var(--red)",letterSpacing:"1px",fontFamily:"var(--raj)"}},"← WEAKEST"):null)),
+            h("div",{style:{display:"flex",alignItems:"center",gap:"6px"}},
+              h("div",{style:{width:"50px",height:"4px",background:"rgba(255,255,255,0.06)",borderRadius:"2px",overflow:"hidden"}},h("div",{style:{height:"100%",width:`${(c.avg/5)*100}%`,background:avgColor(c.avg),borderRadius:"2px"}})),
+              h("span",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"14px",color:avgColor(c.avg),width:"26px",textAlign:"right"}},c.avg.toFixed(1)))))):null),
+      // Col 2: Death reasons
+      h("div",{className:"col"},
+        allRoundsFlat.filter(r=>r.died).length?h("div",{className:"dash-card"},h("div",{className:"section-hdr"},"◆ ALL-TIME DEATH REASONS"),renderDeathPatterns(allRoundsFlat,"",17)):null),
+      // Col 3: Game history
+      h("div",{className:"col"},
+        h("div",{className:"dash-card"},h("div",{className:"section-hdr"},"◆ GAME HISTORY"),
+          ...reviews.map(rev=>h("div",{className:"history-row",onClick:()=>setState({selectedReview:rev.id})},
+            h("div",null,h("div",{style:{fontFamily:"var(--raj)",fontWeight:"600",fontSize:"13px",color:"#ccc"}},[rev.agent,rev.map].filter(Boolean).join(" · ")||"Review"),
+              h("div",{style:{fontSize:"10px",color:"#666",marginTop:"2px"}},formatDate(rev.date)+(rev.result?` · ${rev.result}`:"")+(rev.roundScore?` · ${rev.roundScore}`:"")),),
+            h("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
+              h("span",{style:{fontFamily:"var(--raj)",fontWeight:"700",fontSize:"18px",color:avgColor(parseFloat(rev.overall))}},rev.overall),
+              h("span",{style:{fontSize:"11px",color:"#555"}},"→"))))),
+        h("div",{style:{display:"flex",gap:"8px",marginTop:"8px"}},
+          h("button",{className:"action-btn action-secondary",style:{flex:"1",padding:"10px 0"},onClick:()=>{const b=new Blob([JSON.stringify(reviews,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`valorant-vod-reviews-${new Date().toISOString().slice(0,10)}.json`;a.click();}},"EXPORT"),
+          h("button",{className:"action-btn action-secondary",style:{flex:"1",padding:"10px 0"},onClick:()=>{if(!confirm(`Delete all ${reviews.length} reviews?`))return;saveReviews([]);setState({reviews:[],selectedReview:null});}},"CLEAR ALL"))))
+  );
+}
+
+// ═══ MAIN RENDER ═══
+function render(){
+  const app=document.getElementById("app");app.innerHTML="";
+  app.appendChild(renderHeader());
+  const container=h("div",{className:"container-wide"});
+  if(state.tab!=="dashboard")container.appendChild(renderMatchInfo());
+  if(state.tab==="scorecard")container.appendChild(renderScorecard());
+  else if(state.tab==="rounds")container.appendChild(renderRounds());
+  else if(state.tab==="dashboard")container.appendChild(renderDashboard());
+  app.appendChild(container);
+}
+render();
+// Register service worker for offline support
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
