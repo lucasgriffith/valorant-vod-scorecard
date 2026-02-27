@@ -113,7 +113,7 @@ select,input,textarea{font-family:var(--body);outline:none;color:#ccc;}
 const AGENTS=["Jett","Reyna","Raze","Phoenix","Yoru","Neon","Iso","Sage","Skye","Gekko","Deadlock","Astra","Brimstone","Omen","Harbor","Clove","Viper","Killjoy","Cypher","Chamber","Sova","Fade","Breach","KAY/O","Vyse"];
 const MAPS=["Abyss","Ascent","Bind","Breeze","Fracture","Haven","Icebox","Lotus","Pearl","Split","Sunset"];
 const RANKS=["Iron","Bronze","Silver","Gold","Platinum","Diamond","Ascendant","Immortal","Radiant"];
-const DEATH_REASONS=["Wide swung into multiple","Dry peeked known angle","Bad crosshair placement","Caught rotating","Overextended / no cover","Whiffed spray","Flanked / no info","Insta-killed (Op/headshot)","Traded (acceptable)","Util'd out (flashed/stunned)","Eco'd / force buy loss","Off angle / unexpected peek","Didn't check corner","Slow reaction","Held too long / predictable","Post-plant exposed","Peeked with spike","1vX hero play attempt"];
+const DEATH_REASONS=["Wide swung into multiple","Dry peeked known angle","Bad crosshair placement","Caught rotating","Overextended / no cover","Whiffed spray","Flanked / no info","Insta-killed (Op/headshot)","Ulted","Traded (acceptable)","Util'd (flashed/stunned)","Eco'd / force buy loss","Off angle / unexpected peek","Didn't check corner","Slow reaction","Held too long / predictable","Post-plant exposed","Peeked with spike","1vX hero play attempt","Solo'd site / no fallback"];
 const CATEGORIES=[
   {name:"CROSSHAIR PLACEMENT",icon:"◎",items:[{id:"head_level",label:"Keeping crosshair at head level"},{id:"pre_aim",label:"Pre-aiming common angles"},{id:"crosshair_discipline",label:"Not dragging crosshair to ground"}]},
   {name:"POSITIONING",icon:"⬡",items:[{id:"off_angles",label:"Using off-angles effectively"},{id:"cover",label:"Playing near cover / not exposed"},{id:"site_anchor",label:"Holding site properly (defense)"},{id:"post_plant",label:"Post-plant positioning"}]},
@@ -139,14 +139,17 @@ function catAvg(cat,s){const v=cat.items.map(i=>s[i.id]).filter(Boolean);return 
 function scoredCount(s){return Object.values(s).filter(Boolean).length;}
 function getWeakest(s){return CATEGORIES.map(c=>({name:c.name,icon:c.icon,avg:catAvg(c,s)})).filter(c=>c.avg>0).sort((a,b)=>a.avg-b.avg);}
 function getLowest(s){return CATEGORIES.flatMap(c=>c.items.filter(i=>s[i.id]).map(i=>({label:i.label,score:s[i.id],category:c.name}))).sort((a,b)=>a.score-b.score).slice(0,3);}
-function getDeathStats(r){const d={};r.forEach(rd=>{if(rd.deathReason)d[rd.deathReason]=(d[rd.deathReason]||0)+1;});return Object.entries(d).sort((a,b)=>b[1]-a[1]);}
+function getDeathStats(r){const d={};r.forEach(rd=>{const reasons=rd.deathReasons||[rd.deathReason].filter(Boolean);reasons.forEach(reason=>{if(reason)d[reason]=(d[reason]||0)+1;});});return Object.entries(d).sort((a,b)=>b[1]-a[1]);}
 function formatDate(iso){return new Date(iso).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 
 function saveCurrentGame(){
-  const sc=scoredCount(state.scores);if(sc<5)return alert("Score at least 5 items before saving.");
-  const rev={id:Date.now(),date:new Date().toISOString(),agent:state.agent,map:state.map,rank:state.rank,result:state.result,roundScore:state.roundScore,scores:{...state.scores},rounds:[...state.rounds],notes:state.notes,overall:calcAvg(state.scores).toFixed(1),totalKills:state.rounds.reduce((a,r)=>a+(r.kills||0),0),deaths:state.rounds.filter(r=>r.died).length};
-  const reviews=[rev,...state.reviews];saveReviews(reviews);
-  setState({reviews,scores:{},agent:"",map:"",rank:"",result:"",roundScore:"",notes:"",rounds:[],expandedRound:null,showSummary:false,tab:"dashboard"});
+  const sc=scoredCount(state.scores);
+  if(sc<5){alert("Score at least 5 items before saving.");return;}
+  const rev={id:Date.now(),date:new Date().toISOString(),agent:state.agent,map:state.map,rank:state.rank,result:state.result,roundScore:state.roundScore,scores:{...state.scores},rounds:state.rounds.map(r=>({...r})),notes:state.notes,overall:calcAvg(state.scores).toFixed(1),totalKills:state.rounds.reduce((a,r)=>a+(r.kills||0),0),deaths:state.rounds.filter(r=>r.died).length};
+  state.reviews.unshift(rev);
+  saveReviews(state.reviews);
+  alert("Game saved! Switching to dashboard.");
+  setState({scores:{},agent:"",map:"",rank:"",result:"",roundScore:"",notes:"",rounds:[],expandedRound:null,showSummary:false,tab:"dashboard"});
 }
 function resetCurrent(){if(scoredCount(state.scores)>0&&!confirm("Clear current review?"))return;setState({scores:{},agent:"",map:"",rank:"",result:"",roundScore:"",notes:"",rounds:[],expandedRound:null,showSummary:false});}
 function deleteReview(id){if(!confirm("Delete this review?"))return;const r=state.reviews.filter(x=>x.id!==id);saveReviews(r);setState({reviews:r,selectedReview:null});}
@@ -170,8 +173,8 @@ function exportGameCSV(rev){
   csv+="\n";
   // Round log
   if(rev.rounds&&rev.rounds.length){
-    csv+="ROUND LOG\nRound,Side,Outcome,Kills,Died,Death Reason,Note\n";
-    rev.rounds.forEach((r,i)=>{csv+=`${i+1},${esc(r.side)},${esc(r.outcome)},${r.kills||0},${r.died?"Yes":"No"},${esc(r.deathReason)},${esc(r.note)}\n`;});
+    csv+="ROUND LOG\nRound,Side,Outcome,Kills,Died,Death Reasons,Note\n";
+    rev.rounds.forEach((r,i)=>{const reasons=(r.deathReasons||[r.deathReason].filter(Boolean)).join("; ");csv+=`${i+1},${esc(r.side)},${esc(r.outcome)},${r.kills||0},${r.died?"Yes":"No"},${esc(reasons)},${esc(r.note)}\n`;});
     csv+="\n";
     // Death reason summary
     const dr=getDeathStats(rev.rounds);
@@ -357,7 +360,8 @@ function renderRounds(){
   let detail=null;
   if(state.expandedRound!==null&&rounds[state.expandedRound]){
     const idx=state.expandedRound,r=rounds[idx];
-    const upd=(f,v)=>{rounds[idx]={...rounds[idx],[f]:v};if(f==="died"&&!v)rounds[idx].deathReason="";setState({rounds:[...rounds]});};
+    const upd=(f,v)=>{rounds[idx]={...rounds[idx],[f]:v};if(f==="died"&&!v)rounds[idx].deathReasons=[];setState({rounds:[...rounds]});};
+    const toggleReason=(reason)=>{const cur=rounds[idx].deathReasons||[];const next=cur.includes(reason)?cur.filter(r=>r!==reason):[...cur,reason];rounds[idx]={...rounds[idx],deathReasons:next};setState({rounds:[...rounds]});};
     const noteInp=h("input",{className:"sel",placeholder:"e.g. clutched 1v2, whiffed Op shot...",onChange:e=>upd("note",e.target.value)});noteInp.value=r.note;
     detail=h("div",{style:{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"14px"},className:"fade-in"},
       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}},
@@ -376,15 +380,15 @@ function renderRounds(){
         h("div",null,h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"DIED?"),
           h("div",{style:{display:"flex",gap:"6px"}},...[{v:true,l:"DIED"},{v:false,l:"SURVIVED"}].map(o=>h("button",{className:"toggle-btn",style:{background:r.died===o.v?(o.v?"rgba(255,70,85,0.15)":"rgba(83,215,105,0.15)"):"",color:r.died===o.v?(o.v?"var(--red)":"var(--green)"):"",borderColor:r.died===o.v?(o.v?"rgba(255,70,85,0.4)":"rgba(83,215,105,0.4)"):"",fontSize:"12px",padding:"8px 0"},onClick:()=>upd("died",o.v)},o.l))))),
       // Death reason
-      r.died?h("div",{style:{marginBottom:"10px"}},h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"WHY DID YOU DIE?"),
-        h("div",{style:{display:"flex",flexWrap:"wrap",gap:"5px"}},...DEATH_REASONS.map(reason=>h("button",{className:`reason-chip${r.deathReason===reason?" active":""}`,onClick:()=>upd("deathReason",reason)},reason)))):null,
+      r.died?h("div",{style:{marginBottom:"10px"}},h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"WHY DID YOU DIE? (select all that apply)"),
+        h("div",{style:{display:"flex",flexWrap:"wrap",gap:"5px"}},...DEATH_REASONS.map(reason=>h("button",{className:`reason-chip${(r.deathReasons||[]).includes(reason)?" active":""}`,onClick:()=>toggleReason(reason)},reason)))):null,
       h("div",null,h("div",{style:{fontSize:"10px",color:"#666",letterSpacing:"1px",fontFamily:"var(--raj)",marginBottom:"6px"}},"NOTE"),noteInp));
   }
 
   const addBtn=h("button",{style:{width:"100%",padding:"10px 0",borderRadius:"6px",background:"rgba(255,70,85,0.08)",border:"1px dashed rgba(255,70,85,0.3)",color:"var(--red)",fontFamily:"var(--raj)",fontWeight:"700",fontSize:"13px",letterSpacing:"2px",cursor:"pointer",marginTop:"8px"},onClick:()=>{
     const num=rounds.length+1;let side="ATK";
     if(rounds.length>0){const fs=rounds[0]?.side||"ATK";if(num>12&&num<=24)side=fs==="ATK"?"DEF":"ATK";else if(num<=12)side=fs;else side="OT";}
-    rounds.push({outcome:"",kills:0,died:false,deathReason:"",side,note:""});setState({rounds:[...rounds],expandedRound:rounds.length-1});
+    rounds.push({outcome:"",kills:0,died:false,deathReasons:[],side,note:""});setState({rounds:[...rounds],expandedRound:rounds.length-1});
   }},`+ ADD ROUND ${rounds.length+1}`);
 
   const leftCol=h("div",{className:"col"},h("div",{className:"card"},h("div",{className:"section-hdr"},"◆ ROUND-BY-ROUND LOG"),statsRow,pills,detail,addBtn));
@@ -451,7 +455,7 @@ function renderDashboard(){
   const wins=reviews.filter(r=>r.result==="Win").length,losses=reviews.filter(r=>r.result==="Loss").length;
   const winRate=wins+losses>0?Math.round((wins/(wins+losses))*100):null;
 
-  const allDR={};reviews.forEach(rev=>{(rev.rounds||[]).forEach(r=>{if(r.deathReason)allDR[r.deathReason]=(allDR[r.deathReason]||0)+1;});});
+  const allDR={};reviews.forEach(rev=>{(rev.rounds||[]).forEach(r=>{const reasons=r.deathReasons||[r.deathReason].filter(Boolean);reasons.forEach(reason=>{if(reason)allDR[reason]=(allDR[reason]||0)+1;});});});
   const allCatAvgs=CATEGORIES.map(cat=>{const v=reviews.flatMap(rev=>cat.items.map(i=>rev.scores[i.id]).filter(Boolean));return{name:cat.name,icon:cat.icon,avg:v.length?v.reduce((a,b)=>a+b,0)/v.length:0};}).filter(c=>c.avg>0).sort((a,b)=>a.avg-b.avg);
   const trendData=reviews.slice(0,15).reverse();
 
